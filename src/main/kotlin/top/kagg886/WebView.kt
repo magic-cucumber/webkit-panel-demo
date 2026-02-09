@@ -1,11 +1,10 @@
 package top.kagg886
 
 import java.awt.Canvas
-import java.awt.Graphics
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
-import java.awt.event.HierarchyBoundsAdapter
 import java.awt.event.HierarchyEvent
+import java.awt.event.HierarchyListener
 import javax.swing.SwingUtilities
 
 /**
@@ -23,17 +22,7 @@ class WebView : Canvas(), AutoCloseable {
 
     private var handle = 0L
 
-    override fun addNotify() {
-        super.addNotify()
-
-        SwingUtilities.invokeLater {
-            handle = initAndAttach()
-            SwingUtilities.invokeLater {
-                revalidate()
-                repaint()
-            }
-        }
-
+    init {
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
                 if (handle == 0L) return
@@ -47,10 +36,31 @@ class WebView : Canvas(), AutoCloseable {
                 update(handle, width, height, locationOnScreen.x, locationOnScreen.y)
             }
         })
+
+        addHierarchyListener { e->
+            if (e.changeFlags and HierarchyEvent.DISPLAYABILITY_CHANGED.toLong() != 0L && !isDisplayable) {
+                close()
+            }
+        }
     }
 
-    override fun close() {
+    override fun addNotify() {
+        super.addNotify()
+
+        SwingUtilities.invokeLater {
+            handle = initAndAttach()
+            SwingUtilities.invokeLater {
+                update(handle, width, height, locationOnScreen.x, locationOnScreen.y)
+                revalidate()
+                repaint()
+            }
+        }
+    }
+
+    override fun close() = close0(handle).apply {
+        handle = 0
     }
     private external fun initAndAttach(): Long
     private external fun update(webview: Long, w: Int, h: Int, x: Int, y: Int)
+    private external fun close0(webview: Long)
 }
