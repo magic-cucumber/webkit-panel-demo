@@ -24,10 +24,6 @@ class WebView : Canvas(), AutoCloseable {
         SwingUtilities.invokeLater {
             handle = initAndAttach()
         }
-
-        SwingUtilities.invokeLater { //the width/height on initialize draw is incorrect, so repaint it.
-            repaint()
-        }
     }
 
     override fun paint(g: Graphics?) {

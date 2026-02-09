@@ -141,17 +141,16 @@ Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
 
             // 2) WKWebView
             WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+            config.defaultWebpagePreferences.allowsContentJavaScript = YES;
+            config.preferences.javaScriptCanOpenWindowsAutomatically = YES;
+
             WKWebView *wv = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, w, h) configuration:config];
+            wv.customUserAgent = @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15";
             wv.hidden = NO;
 
-            NSString *html = @"<!doctype html><html><head><meta charset='utf-8'>"
-                             "<style>body{font-family:-apple-system,Helvetica,Arial; margin:24px;}"
-                             "h1{font-size:20px;} .box{padding:12px;border:1px solid #ddd;border-radius:8px;}"
-                             "</style></head><body>"
-                             "<h1>WKWebView embedded in AWT</h1>"
-                             "<div class='box'>If you see this page, NSView embedding works.</div>"
-                             "</body></html>";
-            [wv loadHTMLString:html baseURL:nil];
+            // 3) Load url
+            NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.baidu.com"]];
+            [wv loadRequest:req];
 
             ctx->webView = wv;
 
