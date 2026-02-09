@@ -2,6 +2,10 @@ package top.kagg886
 
 import java.awt.Canvas
 import java.awt.Graphics
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
+import java.awt.event.HierarchyBoundsAdapter
+import java.awt.event.HierarchyEvent
 import javax.swing.SwingUtilities
 
 /**
@@ -21,20 +25,42 @@ class WebView : Canvas(), AutoCloseable {
 
     override fun addNotify() {
         super.addNotify()
+
         SwingUtilities.invokeLater {
             handle = initAndAttach()
+            SwingUtilities.invokeLater {
+                revalidate()
+                repaint()
+            }
         }
+
+        addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) {
+                if (handle == 0L) return
+                println("addComponentListener - componentResized: width=$width, height=$height")
+                update(handle, width, height, locationOnScreen.x, locationOnScreen.y)
+            }
+
+            override fun componentMoved(e: ComponentEvent) {
+                if (handle == 0L) return
+                println("addComponentListener - componentMoved: x=${locationOnScreen.x}, y=${locationOnScreen.y}")
+                update(handle, width, height, locationOnScreen.x, locationOnScreen.y)
+            }
+        })
     }
 
-    override fun paint(g: Graphics?) {
-        paint0(g,handle)
-    }
 
+    override fun paint(g: Graphics?) = paint0(g, handle)
 
     override fun close() {
-
     }
 
     private external fun paint0(g: Graphics?, webview: Long)
     private external fun initAndAttach(): Long
+
+    /**
+     * @param w/h 组件大小（像素）
+     * @param x/y Java 屏幕坐标：左上角为原点（用于将 webview 定位到整个屏幕的某个部分）
+     */
+    private external fun update(webview: Long, w: Int, h: Int, x: Int, y: Int)
 }
