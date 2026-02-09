@@ -9,41 +9,8 @@
 
 #include <atomic>
 #include <cstdint>
-#include <dispatch/dispatch.h>
 
-static inline void runOnMainSync(void (^block)(void)) {
-    if ([NSThread isMainThread]) {
-        block();
-    } else {
-        dispatch_sync(dispatch_get_main_queue(), block);
-    }
-}
-
-static inline void runOnMainAsync(void (^block)(void)) {
-    if ([NSThread isMainThread]) {
-        block();
-    } else {
-        dispatch_async(dispatch_get_main_queue(), block);
-    }
-}
-
-static bool getComponentLocationOnScreen(JNIEnv *env, jobject component, jint *outX, jint *outY) {
-    jclass compClass = env->FindClass("java/awt/Component");
-    jmethodID mid = env->GetMethodID(compClass, "getLocationOnScreen", "()Ljava/awt/Point;");
-    jobject pointObj = env->CallObjectMethod(component, mid);
-
-    jclass pointClass = env->FindClass("java/awt/Point");
-    jfieldID fidX = env->GetFieldID(pointClass, "x", "I");
-    jfieldID fidY = env->GetFieldID(pointClass, "y", "I");
-
-    *outX = env->GetIntField(pointObj, fidX);
-    *outY = env->GetIntField(pointObj, fidY);
-
-    env->DeleteLocalRef(pointClass);
-    env->DeleteLocalRef(pointObj);
-    env->DeleteLocalRef(compClass);
-    return true;
-}
+#import "utils.h"
 
 struct WebViewContext {
     // ObjC 指针：只在主线程读写
@@ -68,12 +35,56 @@ struct WebViewContext {
     jint lastScreenY = INT32_MIN;
 };
 
-static void updateOverlayLayerGeometry(WebViewContext *ctx, jint w, jint h) {
-    if (!ctx || !ctx->rootLayer) return;
+void updateOverlayLayerGeometry(CALayer *layer, jint w, jint h) {
+    if (!layer) return;
 
     CGRect bounds = CGRectMake(0, 0, (CGFloat)w, (CGFloat)h);
-    ctx->rootLayer.bounds = bounds;
-    ctx->rootLayer.position = CGPointMake(bounds.size.width / 2.0, bounds.size.height / 2.0);
+    layer.bounds = bounds;
+    layer.position = CGPointMake(bounds.size.width / 2.0, bounds.size.height / 2.0);
+}
+
+
+bool getComponentLocationOnScreen(JNIEnv *env, jobject component, jint *outX, jint *outY) {
+    if (!env || !component || !outX || !outY) return false;
+
+    jclass compClass = env->FindClass("java/awt/Component");
+    if (!compClass) return false;
+
+    jmethodID mid = env->GetMethodID(compClass, "getLocationOnScreen", "()Ljava/awt/Point;");
+    if (!mid) {
+        env->DeleteLocalRef(compClass);
+        return false;
+    }
+
+    jobject pointObj = env->CallObjectMethod(component, mid);
+    if (!pointObj) {
+        env->DeleteLocalRef(compClass);
+        return false;
+    }
+
+    jclass pointClass = env->FindClass("java/awt/Point");
+    if (!pointClass) {
+        env->DeleteLocalRef(pointObj);
+        env->DeleteLocalRef(compClass);
+        return false;
+    }
+
+    jfieldID fidX = env->GetFieldID(pointClass, "x", "I");
+    jfieldID fidY = env->GetFieldID(pointClass, "y", "I");
+    if (!fidX || !fidY) {
+        env->DeleteLocalRef(pointClass);
+        env->DeleteLocalRef(pointObj);
+        env->DeleteLocalRef(compClass);
+        return false;
+    }
+
+    *outX = env->GetIntField(pointObj, fidX);
+    *outY = env->GetIntField(pointObj, fidY);
+
+    env->DeleteLocalRef(pointClass);
+    env->DeleteLocalRef(pointObj);
+    env->DeleteLocalRef(compClass);
+    return true;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -126,7 +137,7 @@ Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
             ctx->rootLayer.backgroundColor = [[NSColor colorWithCalibratedWhite:0.95 alpha:1.0] CGColor];
             ctx->rootLayer.borderColor = [[NSColor redColor] CGColor];
             ctx->rootLayer.borderWidth = 2.0;
-            updateOverlayLayerGeometry(ctx, w, h);
+            updateOverlayLayerGeometry(ctx->rootLayer, w, h);
 
             // 2) WKWebView
             WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
@@ -228,7 +239,7 @@ Java_top_kagg886_WebView_paint0(JNIEnv *env, jobject thiz, jobject graphics, jlo
                     const jint psx = ctx->pendingScreenX.load(std::memory_order_relaxed);
                     const jint psy = ctx->pendingScreenY.load(std::memory_order_relaxed);
 
-                    updateOverlayLayerGeometry(ctx, pw, ph);
+                    updateOverlayLayerGeometry(ctx->rootLayer, pw, ph);
 
                     if (ctx->webView && ctx->hostWindow && ctx->hostView) {
                         // Java 屏幕坐标：左上原点；Cocoa：左下原点（以主屏为参照）
