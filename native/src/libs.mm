@@ -84,13 +84,13 @@ Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
                 [ctx->webView removeFromSuperview];
                 [ctx->hostView addSubview:ctx->webView positioned:NSWindowAbove relativeTo:nil];
             }
-        });
 
-        [CATransaction begin];
-        [CATransaction setDisableActions:YES];
-        surfaceLayers.layer = ctx->rootLayer;
-        [CATransaction commit];
-        [CATransaction flush];
+            [CATransaction begin];
+            [CATransaction setDisableActions:YES];
+            surfaceLayers.layer = ctx->rootLayer;
+            [CATransaction commit];
+            [CATransaction flush];
+        });
 
         ds->FreeDrawingSurfaceInfo(dsi);
         ds->Unlock(ds);
