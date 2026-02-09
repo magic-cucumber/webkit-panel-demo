@@ -23,12 +23,14 @@ class WebView : Canvas(), AutoCloseable {
         super.addNotify()
         SwingUtilities.invokeLater {
             handle = initAndAttach()
-            println("init handle on 'addNotify', handle is $handle")
+        }
+
+        SwingUtilities.invokeLater { //the width/height on initialize draw is incorrect, so repaint it.
+            repaint()
         }
     }
 
     override fun paint(g: Graphics?) {
-        println("start paint!")
         paint0(g,handle)
     }
 
