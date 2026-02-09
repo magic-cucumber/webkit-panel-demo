@@ -57,10 +57,15 @@ class WebView : Canvas(), AutoCloseable {
         }
     }
 
+    fun loadUrl(url: String) = loadUrl(handle,url)
+
     override fun close() = close0(handle).apply {
         handle = 0
     }
     private external fun initAndAttach(): Long
     private external fun update(webview: Long, w: Int, h: Int, x: Int, y: Int)
     private external fun close0(webview: Long)
+
+
+    private external fun loadUrl(webview: Long,url: String)
 }

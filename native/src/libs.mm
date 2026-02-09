@@ -64,8 +64,8 @@ Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
             wv.customUserAgent = @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15";
             wv.hidden = NO;
 
-            NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.baidu.com"]];
-            [wv loadRequest:req];
+//            NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.baidu.com"]];
+//            [wv loadRequest:req];
 
             ctx->webView = wv;
 
@@ -228,5 +228,28 @@ Java_top_kagg886_WebView_close0(JNIEnv *env, jobject thiz, jlong handle) {
         });
 
         delete ctx;
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_top_kagg886_WebView_loadUrl(JNIEnv *env, jobject thiz, jlong handle,jstring url) {
+    const char* nativeString = env->GetStringUTFChars(url, nullptr);
+    if (nativeString == nullptr) {
+        return;
+    }
+
+    NSString* result = [NSString stringWithUTF8String:nativeString];
+    env->ReleaseStringUTFChars(url, nativeString);
+
+    @autoreleasepool {
+        if (handle == 0) return;
+        auto *ctx = (WebViewContext *)(uintptr_t)handle;
+        if (!ctx) return;
+
+        runOnMainAsync(^{
+            if (!ctx) return;
+
+            [ctx->webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:result]]];
+        });
     }
 }
