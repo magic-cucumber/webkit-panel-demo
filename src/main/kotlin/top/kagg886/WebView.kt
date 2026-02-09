@@ -49,18 +49,8 @@ class WebView : Canvas(), AutoCloseable {
         })
     }
 
-
-    override fun paint(g: Graphics?) = paint0(g, handle)
-
     override fun close() {
     }
-
-    private external fun paint0(g: Graphics?, webview: Long)
     private external fun initAndAttach(): Long
-
-    /**
-     * @param w/h 组件大小（像素）
-     * @param x/y Java 屏幕坐标：左上角为原点（用于将 webview 定位到整个屏幕的某个部分）
-     */
     private external fun update(webview: Long, w: Int, h: Int, x: Int, y: Int)
 }
