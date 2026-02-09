@@ -2,6 +2,7 @@ package top.kagg886
 
 import java.awt.Canvas
 import java.awt.Graphics
+import javax.swing.SwingUtilities
 
 /**
  * ================================================
@@ -16,15 +17,26 @@ class WebView : Canvas(), AutoCloseable {
         }
     }
 
-    private val handle by lazy {
-        create()
+    private var handle = 0L
+
+    override fun addNotify() {
+        super.addNotify()
+        SwingUtilities.invokeLater {
+            handle = initAndAttach()
+            println("init handle on 'addNotify', handle is $handle")
+        }
     }
 
-    override fun paint(g: Graphics?) = paint0(g, handle)
-    override fun close() = dispose(handle)
+    override fun paint(g: Graphics?) {
+        println("start paint!")
+        paint0(g,handle)
+    }
 
-    private external fun paint0(g: Graphics?, handle: Long)
-    private external fun create(): Long
-    private external fun dispose(handle: Long)
 
+    override fun close() {
+
+    }
+
+    private external fun paint0(g: Graphics?, webview: Long)
+    private external fun initAndAttach(): Long
 }
