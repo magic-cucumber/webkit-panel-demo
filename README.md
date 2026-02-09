@@ -1,6 +1,8 @@
 # 在 swing panel 里 嵌入 WKWebView
 
-![[preview.mp4]]
+![PixPin_2026-02-09_21-41-52](https://github.com/user-attachments/assets/a2e1177d-bef1-4082-8810-bd76f7e81fcd)
+
+
 
 ## 支持的特性
 
