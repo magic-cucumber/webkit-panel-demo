@@ -1,10 +1,9 @@
-package top.kagg886
+package top.kagg886.wvbridge
 
 import java.awt.Canvas
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.HierarchyEvent
-import java.awt.event.HierarchyListener
 import javax.swing.SwingUtilities
 
 /**

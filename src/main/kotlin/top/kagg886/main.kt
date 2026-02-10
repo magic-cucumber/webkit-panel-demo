@@ -1,5 +1,6 @@
 package top.kagg886
 
+import top.kagg886.wvbridge.WebView
 import java.awt.Dimension
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
