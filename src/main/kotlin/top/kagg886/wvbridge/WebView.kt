@@ -4,6 +4,7 @@ import java.awt.Canvas
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.HierarchyEvent
+import java.util.function.Consumer
 import javax.swing.SwingUtilities
 
 /**
@@ -20,6 +21,7 @@ class WebView : Canvas(), AutoCloseable {
     }
 
     private var handle = 0L
+    private val progressListener = mutableSetOf<Consumer<Float>>()
 
     init {
         addComponentListener(object : ComponentAdapter() {
@@ -36,7 +38,7 @@ class WebView : Canvas(), AutoCloseable {
             }
         })
 
-        addHierarchyListener { e->
+        addHierarchyListener { e ->
             if (e.changeFlags and HierarchyEvent.DISPLAYABILITY_CHANGED.toLong() != 0L && !isDisplayable) {
                 close()
             }
@@ -48,6 +50,11 @@ class WebView : Canvas(), AutoCloseable {
 
         SwingUtilities.invokeLater {
             handle = initAndAttach()
+            setProgressListener(handle) { progress ->
+                progressListener.forEach {
+                    it.accept(progress)
+                }
+            }
             SwingUtilities.invokeLater {
                 update(handle, width, height, locationOnScreen.x, locationOnScreen.y)
                 revalidate()
@@ -56,15 +63,25 @@ class WebView : Canvas(), AutoCloseable {
         }
     }
 
-    fun loadUrl(url: String) = loadUrl(handle,url)
+    fun addProgressListener(consumer: Consumer<Float>): Unit {
+        progressListener.add(consumer)
+    }
+
+    fun removeProgressListener(consumer: Consumer<Float>) {
+        progressListener.remove(consumer)
+    }
+
+    fun loadUrl(url: String) = loadUrl(handle, url)
 
     override fun close() = close0(handle).apply {
         handle = 0
     }
+
     private external fun initAndAttach(): Long
+    private external fun setProgressListener(webview: Long, consumer: Consumer<Float>)
     private external fun update(webview: Long, w: Int, h: Int, x: Int, y: Int)
     private external fun close0(webview: Long)
 
 
-    private external fun loadUrl(webview: Long,url: String)
+    private external fun loadUrl(webview: Long, url: String)
 }

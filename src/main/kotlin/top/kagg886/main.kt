@@ -25,6 +25,25 @@ fun main() = SwingUtilities.invokeLater {
 
     val webView = WebView()
 
+    webView.addProgressListener(::println)
+
+    // --- 新增：进度条（位于输入框上方） ---
+    val progressBar = JProgressBar(0, 100).apply {
+        value = 0
+        isStringPainted = false
+        isVisible = false
+        preferredSize = Dimension(600, 6)
+    }
+
+    webView.addProgressListener { progress ->
+        SwingUtilities.invokeLater {
+            val p = progress.coerceIn(0f, 1f)
+            progressBar.value = (p * 100).toInt().coerceIn(0, 100)
+            // progress 为 0.0 或 1.0 时隐藏
+            progressBar.isVisible = p > 0f && p < 1f
+        }
+    }
+
     // --- 新增：地址栏输入框 ---
     val urlField = JTextField("https://www.google.com").apply {
         preferredSize = Dimension(600, 30)
@@ -32,6 +51,10 @@ fun main() = SwingUtilities.invokeLater {
 
     // 监听回车键
     urlField.addActionListener {
+        // 0.0 时隐藏，等待 WebView 报告真实进度后再显示
+        progressBar.value = 0
+        progressBar.isVisible = false
+
         val url = urlField.text
         webView.loadUrl(url)
     }
@@ -42,16 +65,25 @@ fun main() = SwingUtilities.invokeLater {
         insets = Insets(10, 10, 10, 10) // 设置边距
     }
 
-    // 添加输入框 (第 0 行)
+    // 添加进度条 (第 0 行)
     gbc.gridy = 0
     gbc.weightx = 1.0
     gbc.weighty = 0.0
+    gbc.fill = GridBagConstraints.HORIZONTAL
+    gbc.insets = Insets(10, 10, 2, 10)
+    frame.add(progressBar, gbc)
+
+    // 添加输入框 (第 1 行)
+    gbc.gridy = 1
+    gbc.fill = GridBagConstraints.HORIZONTAL
+    gbc.insets = Insets(2, 10, 10, 10)
     frame.add(urlField, gbc)
 
-    // 添加 WebView (第 1 行)
-    gbc.gridy = 1
+    // 添加 WebView (第 2 行)
+    gbc.gridy = 2
     gbc.weighty = 1.0 // 占据剩余垂直空间
     gbc.fill = GridBagConstraints.BOTH
+    gbc.insets = Insets(0, 10, 10, 10)
     frame.add(webView, gbc)
 
     // --- 菜单逻辑 (保持不变) ---
@@ -65,7 +97,11 @@ fun main() = SwingUtilities.invokeLater {
             frame.remove(webView)
             toggleItem.text = "显示 WebView"
         } else {
-            gbc.gridy = 1 // 确保重新添加时位置正确
+            gbc.gridy = 2 // 确保重新添加时位置正确
+            gbc.weightx = 1.0
+            gbc.weighty = 1.0
+            gbc.fill = GridBagConstraints.BOTH
+            gbc.insets = Insets(0, 10, 10, 10)
             frame.add(webView, gbc)
             toggleItem.text = "删除 WebView"
         }

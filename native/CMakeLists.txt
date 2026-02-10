@@ -35,6 +35,7 @@ set(JNI_LIBRARIES
 set(SOURCES
         src/libs.mm
         src/utils.mm
+        src/progress.mm
 )
 
 # 创建共享库

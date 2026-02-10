@@ -11,12 +11,14 @@
 #include <cstdint>
 
 #import "utils.h"
+#import "progress.h"
 
 struct WebViewContext {
     WKWebView *webView = nil;
     NSWindow *hostWindow = nil;
     NSView *hostView = nil;
     CALayer *rootLayer = nil;
+    ProgressObserver *progressObserver = nil;
 };
 
 API_EXPORT(jlong, initAndAttach) {
@@ -212,6 +214,7 @@ API_EXPORT(void, close0, jlong handle) {
             if (!ctx) return;
 
             if (ctx->webView) {
+                [ctx->webView removeObserver:ctx->progressObserver forKeyPath:@"estimatedProgress"];
                 [ctx->webView removeFromSuperview];
                 ctx->webView = nil;
             }
@@ -219,6 +222,9 @@ API_EXPORT(void, close0, jlong handle) {
             ctx->hostView = nil;
             ctx->hostWindow = nil;
             ctx->rootLayer = nil;
+
+            [ctx->progressObserver release];
+            ctx->progressObserver = nil;
         });
 
         delete ctx;
@@ -244,5 +250,32 @@ API_EXPORT(void, loadUrl, jlong handle, jstring url) {
 
             [ctx->webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:result]]];
         });
+    }
+}
+
+API_EXPORT(void, setProgressListener, jlong handle, jobject listener) {
+    @autoreleasepool {
+        if (handle == 0) return;
+        auto *ctx = (WebViewContext *) (uintptr_t) handle;
+        if (!ctx) return;
+
+        // 3. 实例化观察者
+        JavaVM *jvm = nil;
+        if (env->GetJavaVM(&jvm) != JNI_OK) return;
+
+        ProgressObserver *observer = [[ProgressObserver alloc] initWithJVM:jvm
+                                            listener:env->NewGlobalRef(listener)
+                                            methodID:env->GetMethodID(
+                                                    env->GetObjectClass(listener),
+                                                    "accept",
+                                                    "(Ljava/lang/Object;)V"
+                                            )];
+
+        [ctx->webView addObserver:observer
+                  forKeyPath:@"estimatedProgress"
+                     options:NSKeyValueObservingOptionNew
+                     context:nil];
+
+        ctx->progressObserver = observer;
     }
 }
