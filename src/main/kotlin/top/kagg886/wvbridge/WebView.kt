@@ -58,7 +58,8 @@ class WebView : Canvas(), AutoCloseable {
                 }
             }
             setNavigationHandler(handle) { url->
-                val list = navigationHandler.entries.sortedBy { it.key }.map { it.value.toList() }.flatten()
+                if (navigationHandler.isEmpty()) return@setNavigationHandler true
+                val list = navigationHandler.entries.sortedBy { it.key }.flatMap { it.value.toList() }
                 !list.any { it.handleNavigation(url) === NavigationHandler.NavigationResult.DENIED }
             }
             SwingUtilities.invokeLater {
