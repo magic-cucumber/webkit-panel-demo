@@ -19,8 +19,7 @@ struct WebViewContext {
     CALayer *rootLayer = nil;
 };
 
-extern "C" JNIEXPORT jlong JNICALL
-Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
+API_EXPORT(jlong, initAndAttach) {
     @autoreleasepool {
         // JAWT surface layers
         JAWT awt;
@@ -43,7 +42,7 @@ Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
             return 0;
         }
 
-        id<JAWT_SurfaceLayers> surfaceLayers = (__bridge id<JAWT_SurfaceLayers>)dsi->platformInfo;
+        id <JAWT_SurfaceLayers> surfaceLayers = (__bridge id <JAWT_SurfaceLayers>) dsi->platformInfo;
         if (!surfaceLayers) {
             ds->FreeDrawingSurfaceInfo(dsi);
             ds->Unlock(ds);
@@ -59,13 +58,10 @@ Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
             config.defaultWebpagePreferences.allowsContentJavaScript = YES;
             config.preferences.javaScriptCanOpenWindowsAutomatically = YES;
 
-            WKWebView *wv = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 0,0)
+            WKWebView *wv = [[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)
                                                configuration:config];
             wv.customUserAgent = @"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15";
             wv.hidden = NO;
-
-//            NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.baidu.com"]];
-//            [wv loadRequest:req];
 
             ctx->webView = wv;
 
@@ -96,18 +92,17 @@ Java_top_kagg886_WebView_initAndAttach(JNIEnv *env, jobject thiz) {
         ds->Unlock(ds);
         awt.FreeDrawingSurface(ds);
 
-        return (jlong)(uintptr_t)ctx;
+        return (jlong) (uintptr_t) ctx;
     }
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_top_kagg886_WebView_update(JNIEnv *env, jobject thiz, jlong handle, jint w, jint h, jint x, jint y) {
-    (void)env;
-    (void)thiz;
+API_EXPORT(void, update, jlong handle, jint w, jint h, jint x, jint y) {
+    (void) env;
+    (void) thiz;
 
     @autoreleasepool {
         if (handle == 0) return;
-        auto *ctx = (WebViewContext *)(uintptr_t)handle;
+        auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
 
         runOnMainAsync(^{
@@ -123,10 +118,10 @@ Java_top_kagg886_WebView_update(JNIEnv *env, jobject thiz, jlong handle, jint w,
             if (w <= 0 || h <= 0) return;
 
             CGFloat primaryH = NSScreen.mainScreen.frame.size.height;
-            NSRect cocoaScreenRect = NSMakeRect((CGFloat)x,
-                                                primaryH - (CGFloat)y - (CGFloat)h,
-                                                (CGFloat)w,
-                                                (CGFloat)h);;
+            NSRect cocoaScreenRect = NSMakeRect((CGFloat) x,
+                                                primaryH - (CGFloat) y - (CGFloat) h,
+                                                (CGFloat) w,
+                                                (CGFloat) h);;
             NSRect windowRect = [ctx->hostWindow convertRectFromScreen:cocoaScreenRect];
             NSRect target = [ctx->hostView convertRect:windowRect fromView:nil];
 
@@ -137,11 +132,10 @@ Java_top_kagg886_WebView_update(JNIEnv *env, jobject thiz, jlong handle, jint w,
     }
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_top_kagg886_WebView_close0(JNIEnv *env, jobject thiz, jlong handle) {
+API_EXPORT(void, close0, jlong handle) {
     @autoreleasepool {
         if (handle == 0) return;
-        auto *ctx = (WebViewContext *)(uintptr_t)handle;
+        auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
 
         // AWT 相关清理（解绑 surfaceLayers.layer）只有在“正确上下文”下才执行。
@@ -187,7 +181,7 @@ Java_top_kagg886_WebView_close0(JNIEnv *env, jobject thiz, jlong handle) {
                 break;
             }
 
-            id<JAWT_SurfaceLayers> surfaceLayers = (__bridge id<JAWT_SurfaceLayers>)dsi->platformInfo;
+            id <JAWT_SurfaceLayers> surfaceLayers = (__bridge id <JAWT_SurfaceLayers>) dsi->platformInfo;
             if (!surfaceLayers) {
                 ds->FreeDrawingSurfaceInfo(dsi);
                 ds->Unlock(ds);
@@ -231,19 +225,18 @@ Java_top_kagg886_WebView_close0(JNIEnv *env, jobject thiz, jlong handle) {
     }
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_top_kagg886_WebView_loadUrl(JNIEnv *env, jobject thiz, jlong handle,jstring url) {
-    const char* nativeString = env->GetStringUTFChars(url, nullptr);
+API_EXPORT(void, loadUrl, jlong handle, jstring url) {
+    const char *nativeString = env->GetStringUTFChars(url, nullptr);
     if (nativeString == nullptr) {
         return;
     }
 
-    NSString* result = [NSString stringWithUTF8String:nativeString];
+    NSString *result = [NSString stringWithUTF8String:nativeString];
     env->ReleaseStringUTFChars(url, nativeString);
 
     @autoreleasepool {
         if (handle == 0) return;
-        auto *ctx = (WebViewContext *)(uintptr_t)handle;
+        auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
 
         runOnMainAsync(^{

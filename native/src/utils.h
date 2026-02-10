@@ -42,4 +42,8 @@ void jni_println_wrapper(JNIEnv *env, Args&&... args) {
 
 #define println(...) jni_println_wrapper(env, __VA_ARGS__)
 
+#include <jni.h>
+
+#define API_EXPORT(rtn, name, ...) \
+    extern "C" JNIEXPORT rtn JNICALL Java_top_kagg886_WebView_##name(JNIEnv *env, jobject thiz, ##__VA_ARGS__)
 #endif
