@@ -24,7 +24,11 @@ fun main() = SwingUtilities.invokeLater {
     frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
     frame.layout = GridBagLayout()
 
-    val webView = WebView()
+    val initializeUrl = "https://www.google.com"
+
+    val webView = WebView {
+        loadUrl(initializeUrl)
+    }
 
     webView.addProgressListener(::println)
 
@@ -45,10 +49,9 @@ fun main() = SwingUtilities.invokeLater {
     }
 
     // --- 新增：地址栏输入框 ---
-    val urlField = JTextField("https://www.google.com").apply {
+    val urlField = JTextField(initializeUrl).apply {
         preferredSize = Dimension(600, 30)
     }
-    webView.loadUrl(urlField.text)
     webView.addNavigationHandler {
         urlField.text = it
         NavigationHandler.NavigationResult.ALLOWED

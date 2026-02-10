@@ -14,7 +14,7 @@ import javax.swing.SwingUtilities
  * Created on: 2026/1/6 13:37
  * ================================================
  */
-class WebView : Canvas(), AutoCloseable {
+class WebView(private val initialize: WebView.() -> Unit) : Canvas(), AutoCloseable {
     companion object {
         init {
             System.load("/Users/886kagg/IdeaProjects/webkit-panel-demo/native/build/lib/libwvbridge.dylib")
@@ -52,6 +52,7 @@ class WebView : Canvas(), AutoCloseable {
 
         SwingUtilities.invokeLater {
             handle = initAndAttach()
+            initialize()
             setProgressListener(handle) { progress ->
                 progressListener.forEach {
                     it.accept(progress)
