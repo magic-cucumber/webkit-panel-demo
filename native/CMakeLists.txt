@@ -36,6 +36,7 @@ set(SOURCES
         src/libs.mm
         src/utils.mm
         src/progress.mm
+        src/navigation.mm
 )
 
 # 创建共享库

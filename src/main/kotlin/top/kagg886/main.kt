@@ -1,5 +1,6 @@
 package top.kagg886
 
+import top.kagg886.wvbridge.NavigationHandler
 import top.kagg886.wvbridge.WebView
 import java.awt.Dimension
 import java.awt.GridBagConstraints
@@ -26,6 +27,10 @@ fun main() = SwingUtilities.invokeLater {
     val webView = WebView()
 
     webView.addProgressListener(::println)
+    webView.addNavigationHandler {
+        println(it)
+        NavigationHandler.NavigationResult.ALLOWED
+    }
 
     // --- 新增：进度条（位于输入框上方） ---
     val progressBar = JProgressBar(0, 100).apply {

@@ -5,6 +5,7 @@ import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.HierarchyEvent
 import java.util.function.Consumer
+import java.util.function.Function
 import javax.swing.SwingUtilities
 
 /**
@@ -22,6 +23,7 @@ class WebView : Canvas(), AutoCloseable {
 
     private var handle = 0L
     private val progressListener = mutableSetOf<Consumer<Float>>()
+    private val navigationHandler = mutableMapOf<Int, MutableSet<NavigationHandler>>()
 
     init {
         addComponentListener(object : ComponentAdapter() {
@@ -55,6 +57,10 @@ class WebView : Canvas(), AutoCloseable {
                     it.accept(progress)
                 }
             }
+            setNavigationHandler(handle) { url->
+                val list = navigationHandler.entries.sortedBy { it.key }.map { it.value.toList() }.flatten()
+                !list.any { it.handleNavigation(url) === NavigationHandler.NavigationResult.DENIED }
+            }
             SwingUtilities.invokeLater {
                 update(handle, width, height, locationOnScreen.x, locationOnScreen.y)
                 revalidate()
@@ -71,6 +77,19 @@ class WebView : Canvas(), AutoCloseable {
         progressListener.remove(consumer)
     }
 
+    fun addNavigationHandler(priority: Int = 0,handle: NavigationHandler) {
+        val queue = navigationHandler.getOrPut(priority) { mutableSetOf() }
+        queue.add(handle)
+    }
+
+    fun removeNavigationHandler(priority: Int = 0,handle: NavigationHandler) {
+        val queue = navigationHandler.getOrPut(priority) { mutableSetOf() }
+        queue.remove(handle)
+        if (queue.isEmpty()) {
+            navigationHandler.remove(priority)
+        }
+    }
+
     fun loadUrl(url: String) = loadUrl(handle, url)
 
     override fun close() = close0(handle).apply {
@@ -79,6 +98,7 @@ class WebView : Canvas(), AutoCloseable {
 
     private external fun initAndAttach(): Long
     private external fun setProgressListener(webview: Long, consumer: Consumer<Float>)
+    private external fun setNavigationHandler(webview: Long, handler: Function<String, Boolean>)
     private external fun update(webview: Long, w: Int, h: Int, x: Int, y: Int)
     private external fun close0(webview: Long)
 

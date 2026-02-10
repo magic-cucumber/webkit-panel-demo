@@ -12,6 +12,7 @@
 
 #import "utils.h"
 #import "progress.h"
+#import "navigation.h"
 
 struct WebViewContext {
     WKWebView *webView = nil;
@@ -19,6 +20,7 @@ struct WebViewContext {
     NSView *hostView = nil;
     CALayer *rootLayer = nil;
     ProgressObserver *progressObserver = nil;
+    NavigationGateway *navigationGateway = nil;
 };
 
 API_EXPORT(jlong, initAndAttach) {
@@ -214,6 +216,10 @@ API_EXPORT(void, close0, jlong handle) {
             if (!ctx) return;
 
             if (ctx->webView) {
+                ctx->webView.navigationDelegate = nil;
+                [ctx->navigationGateway release];
+                ctx->navigationGateway = nil;
+
                 [ctx->webView removeObserver:ctx->progressObserver forKeyPath:@"estimatedProgress"];
                 [ctx->webView removeFromSuperview];
                 ctx->webView = nil;
@@ -253,29 +259,77 @@ API_EXPORT(void, loadUrl, jlong handle, jstring url) {
     }
 }
 
+//private external fun setProgressListener(webview: Long, consumer: Consumer<Float>)
 API_EXPORT(void, setProgressListener, jlong handle, jobject listener) {
     @autoreleasepool {
         if (handle == 0) return;
         auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
 
-        // 3. 实例化观察者
         JavaVM *jvm = nil;
         if (env->GetJavaVM(&jvm) != JNI_OK) return;
 
+        if (ctx->progressObserver != nil) {
+            [ctx->webView removeObserver:ctx->progressObserver forKeyPath:@"estimatedProgress"];
+            [ctx->progressObserver release];
+            ctx->progressObserver = nil;
+        }
+
         ProgressObserver *observer = [[ProgressObserver alloc] initWithJVM:jvm
-                                            listener:env->NewGlobalRef(listener)
-                                            methodID:env->GetMethodID(
-                                                    env->GetObjectClass(listener),
-                                                    "accept",
-                                                    "(Ljava/lang/Object;)V"
-                                            )];
+                                                                  listener:env->NewGlobalRef(listener)
+                                                                  methodID:env->GetMethodID(
+                                                                          env->GetObjectClass(listener),
+                                                                          "accept",
+                                                                          "(Ljava/lang/Object;)V"
+                                                                  )];
 
         [ctx->webView addObserver:observer
-                  forKeyPath:@"estimatedProgress"
-                     options:NSKeyValueObservingOptionNew
-                     context:nil];
+                       forKeyPath:@"estimatedProgress"
+                          options:NSKeyValueObservingOptionNew
+                          context:nil];
 
         ctx->progressObserver = observer;
+    }
+}
+
+//private external fun setNavigationHandler(webview: Long, handler: Function<String, Boolean>)
+API_EXPORT(void, setNavigationHandler, jlong handle, jobject handler) {
+    @autoreleasepool {
+        if (handle == 0) return;
+        auto *ctx = (WebViewContext *) (uintptr_t) handle;
+        if (!ctx) return;
+
+        JavaVM *jvm = nil;
+        if (env->GetJavaVM(&jvm) != JNI_OK) return;
+
+        if (handler == nullptr) {
+            ctx->webView.navigationDelegate = nil;
+            [ctx->navigationGateway release];
+            ctx->navigationGateway = nil;
+            return;
+        }
+
+        // Kotlin Function1 的 erase 签名为 (Ljava/lang/Object;)Ljava/lang/Object;
+        jclass handlerCls = env->GetObjectClass(handler);
+        if (!handlerCls) return;
+        jmethodID invokeMID = env->GetMethodID(handlerCls, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;");
+        env->DeleteLocalRef(handlerCls);
+        if (!invokeMID) return;
+
+        jobject handlerGlobalRef = env->NewGlobalRef(handler);
+        if (!handlerGlobalRef) return;
+
+        if (ctx->navigationGateway != nil) {
+            ctx->webView.navigationDelegate = nil;
+            [ctx->navigationGateway release];
+            ctx->navigationGateway = nil;
+        }
+
+
+        NavigationGateway *gateway = [[NavigationGateway alloc] initWithJVM:jvm
+                                                                   listener:handlerGlobalRef
+                                                                   methodID:invokeMID];
+        ctx->webView.navigationDelegate = gateway;
+        ctx->navigationGateway = gateway;
     }
 }
