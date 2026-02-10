@@ -27,10 +27,6 @@ fun main() = SwingUtilities.invokeLater {
     val webView = WebView()
 
     webView.addProgressListener(::println)
-    webView.addNavigationHandler {
-        println(it)
-        NavigationHandler.NavigationResult.ALLOWED
-    }
 
     // --- 新增：进度条（位于输入框上方） ---
     val progressBar = JProgressBar(0, 100).apply {
@@ -44,7 +40,6 @@ fun main() = SwingUtilities.invokeLater {
         SwingUtilities.invokeLater {
             val p = progress.coerceIn(0f, 1f)
             progressBar.value = (p * 100).toInt().coerceIn(0, 100)
-            // progress 为 0.0 或 1.0 时隐藏
             progressBar.isVisible = p > 0f && p < 1f
         }
     }
@@ -52,6 +47,11 @@ fun main() = SwingUtilities.invokeLater {
     // --- 新增：地址栏输入框 ---
     val urlField = JTextField("https://www.google.com").apply {
         preferredSize = Dimension(600, 30)
+    }
+    webView.loadUrl(urlField.text)
+    webView.addNavigationHandler {
+        urlField.text = it
+        NavigationHandler.NavigationResult.ALLOWED
     }
 
     // 监听回车键

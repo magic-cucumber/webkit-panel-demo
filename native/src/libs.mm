@@ -105,7 +105,10 @@ API_EXPORT(void, update, jlong handle, jint w, jint h, jint x, jint y) {
     (void) thiz;
 
     @autoreleasepool {
-        if (handle == 0) return;
+        if (handle == 0) {
+            throw_jni_exception(env, "java/lang/NullPointerException", "handle is null");
+            return;
+        }
         auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
 
@@ -138,7 +141,10 @@ API_EXPORT(void, update, jlong handle, jint w, jint h, jint x, jint y) {
 
 API_EXPORT(void, close0, jlong handle) {
     @autoreleasepool {
-        if (handle == 0) return;
+        if (handle == 0) {
+            throw_jni_exception(env, "java/lang/NullPointerException", "handle is null");
+            return;
+        }
         auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
 
@@ -247,7 +253,10 @@ API_EXPORT(void, loadUrl, jlong handle, jstring url) {
     env->ReleaseStringUTFChars(url, nativeString);
 
     @autoreleasepool {
-        if (handle == 0) return;
+        if (handle == 0) {
+            throw_jni_exception(env, "java/lang/NullPointerException", "handle is null");
+            return;
+        }
         auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
 
@@ -262,12 +271,12 @@ API_EXPORT(void, loadUrl, jlong handle, jstring url) {
 //private external fun setProgressListener(webview: Long, consumer: Consumer<Float>)
 API_EXPORT(void, setProgressListener, jlong handle, jobject listener) {
     @autoreleasepool {
-        if (handle == 0) return;
+        if (handle == 0) {
+            throw_jni_exception(env, "java/lang/NullPointerException", "handle is null");
+            return;
+        }
         auto *ctx = (WebViewContext *) (uintptr_t) handle;
         if (!ctx) return;
-
-        JavaVM *jvm = nil;
-        if (env->GetJavaVM(&jvm) != JNI_OK) return;
 
         if (ctx->progressObserver != nil) {
             [ctx->webView removeObserver:ctx->progressObserver forKeyPath:@"estimatedProgress"];
@@ -275,13 +284,20 @@ API_EXPORT(void, setProgressListener, jlong handle, jobject listener) {
             ctx->progressObserver = nil;
         }
 
+        if (listener == nullptr) return;
+
+        JavaVM *jvm = nil;
+        if (env->GetJavaVM(&jvm) != JNI_OK) return;
+
+        jclass listenerClass = env->GetObjectClass(listener);
+        jmethodID acceptMID = env->GetMethodID(listenerClass,
+                                               "accept",
+                                               "(Ljava/lang/Object;)V");
+        env->DeleteLocalRef(listenerClass);
+
         ProgressObserver *observer = [[ProgressObserver alloc] initWithJVM:jvm
                                                                   listener:env->NewGlobalRef(listener)
-                                                                  methodID:env->GetMethodID(
-                                                                          env->GetObjectClass(listener),
-                                                                          "accept",
-                                                                          "(Ljava/lang/Object;)V"
-                                                                  )];
+                                                                  methodID:acceptMID];
 
         [ctx->webView addObserver:observer
                        forKeyPath:@"estimatedProgress"
@@ -295,29 +311,12 @@ API_EXPORT(void, setProgressListener, jlong handle, jobject listener) {
 //private external fun setNavigationHandler(webview: Long, handler: Function<String, Boolean>)
 API_EXPORT(void, setNavigationHandler, jlong handle, jobject handler) {
     @autoreleasepool {
-        if (handle == 0) return;
-        auto *ctx = (WebViewContext *) (uintptr_t) handle;
-        if (!ctx) return;
-
-        JavaVM *jvm = nil;
-        if (env->GetJavaVM(&jvm) != JNI_OK) return;
-
-        if (handler == nullptr) {
-            ctx->webView.navigationDelegate = nil;
-            [ctx->navigationGateway release];
-            ctx->navigationGateway = nil;
+        if (handle == 0) {
+            throw_jni_exception(env, "java/lang/NullPointerException", "handle is null");
             return;
         }
-
-        // Kotlin Function1 的 erase 签名为 (Ljava/lang/Object;)Ljava/lang/Object;
-        jclass handlerCls = env->GetObjectClass(handler);
-        if (!handlerCls) return;
-        jmethodID invokeMID = env->GetMethodID(handlerCls, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;");
-        env->DeleteLocalRef(handlerCls);
-        if (!invokeMID) return;
-
-        jobject handlerGlobalRef = env->NewGlobalRef(handler);
-        if (!handlerGlobalRef) return;
+        auto *ctx = (WebViewContext *) (uintptr_t) handle;
+        if (!ctx) return;
 
         if (ctx->navigationGateway != nil) {
             ctx->webView.navigationDelegate = nil;
@@ -325,10 +324,20 @@ API_EXPORT(void, setNavigationHandler, jlong handle, jobject handler) {
             ctx->navigationGateway = nil;
         }
 
+        if (handler == nullptr) return;
+
+        JavaVM *jvm = nil;
+        if (env->GetJavaVM(&jvm) != JNI_OK) return;
+
+        jclass handlerClass = env->GetObjectClass(handler);
+        jmethodID applyMID = env->GetMethodID(handlerClass,
+                                              "apply",
+                                              "(Ljava/lang/Object;)Ljava/lang/Object;");
+        env->DeleteLocalRef(handlerClass);
 
         NavigationGateway *gateway = [[NavigationGateway alloc] initWithJVM:jvm
-                                                                   listener:handlerGlobalRef
-                                                                   methodID:invokeMID];
+                                                                   listener:env->NewGlobalRef(handler)
+                                                                   methodID:applyMID];
         ctx->webView.navigationDelegate = gateway;
         ctx->navigationGateway = gateway;
     }

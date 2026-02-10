@@ -19,6 +19,10 @@ void runOnMainAsync(void (^block)(void));
 
 void println0(JNIEnv *env, const char *message);
 
+// 在 Java 层抛出指定类型的异常（name 形如 "java/lang/RuntimeException" 或 "java.lang.RuntimeException"）。
+// 若当前线程已存在 pending exception，则保持原异常不覆盖。
+void throw_jni_exception(JNIEnv *env, const char *name, const char *message);
+
 
 
 // 1. 内部辅助函数：使用模板递归或折叠表达式拼接参数
